@@ -65,6 +65,11 @@ MediaStorageDlg::MediaStorageDlg(QWidget * parent/* = 0*/)
     ui.singleCheckBox->setChecked(audiostorage_mode & AUDIOSTORAGE_SINGLEFILE);
     ui.multipleCheckBox->setChecked(audiostorage_mode & AUDIOSTORAGE_SEPARATEFILES);
 
+    quint32 sts = ttSettings->value(SETTINGS_MEDIASTORAGE_STREAMTYPES,
+                                    SETTINGS_MEDIASTORAGE_STREAMTYPES_DEFAULT).toUInt();
+    ui.voicestreamCheckBox->setChecked(sts & STREAMTYPE_VOICE);
+    ui.mediafileCheckBox->setChecked(sts & STREAMTYPE_MEDIAFILE_AUDIO);
+
     AudioFileFormat aff = (AudioFileFormat)ttSettings->value(SETTINGS_MEDIASTORAGE_FILEFORMAT, 
                                                              AFF_WAVE_FORMAT).toInt();
     
@@ -94,11 +99,26 @@ void MediaStorageDlg::accept()
         return;
     }
 
+    StreamTypes sts = STREAMTYPE_NONE;
+    if (ui.voicestreamCheckBox->isChecked())
+        sts |= STREAMTYPE_VOICE;
+    if (ui.mediafileCheckBox->isChecked())
+        sts |= STREAMTYPE_MEDIAFILE_AUDIO;
+
+    if (sts == STREAMTYPE_NONE)
+    {
+        QMessageBox::information(this, tr("Stream type to store"),
+                                 tr("No stream type has been selected as audio input for recording"));
+        return;
+    }
+
     AudioFileFormat aff = (AudioFileFormat)ui.affComboBox->itemData(ui.affComboBox->currentIndex()).toInt();
 
     ttSettings->setValue(SETTINGS_MEDIASTORAGE_MODE, audiostorage_mode);
     ttSettings->setValue(SETTINGS_MEDIASTORAGE_AUDIOFOLDER, folder);
     ttSettings->setValue(SETTINGS_MEDIASTORAGE_FILEFORMAT, aff);
+
+    ttSettings->setValue(SETTINGS_MEDIASTORAGE_STREAMTYPES, sts);
 
     folder = ui.chanlogEdit->text();
     ttSettings->setValue(SETTINGS_MEDIASTORAGE_CHANLOGFOLDER, folder);

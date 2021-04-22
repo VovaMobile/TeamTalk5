@@ -2616,8 +2616,10 @@ void MainWindow::updateAudioStorage(bool enable, AudioStorageMode mode)
     AudioFileFormat aff = (AudioFileFormat)ttSettings->value(SETTINGS_MEDIASTORAGE_FILEFORMAT, 
                                                              AFF_WAVE_FORMAT).toInt();
     QString audiofolder = ttSettings->value(SETTINGS_MEDIASTORAGE_AUDIOFOLDER).toString();
+    auto sts = ttSettings->value(SETTINGS_MEDIASTORAGE_STREAMTYPES,
+                                 SETTINGS_MEDIASTORAGE_STREAMTYPES_DEFAULT).toUInt();
 
-    if(mode == AUDIOSTORAGE_SINGLEFILE)
+    if (mode & AUDIOSTORAGE_SINGLEFILE)
     {
         if(enable)
         {
@@ -2628,8 +2630,8 @@ void MainWindow::updateAudioStorage(bool enable, AudioStorageMode mode)
             QString filepath = audiofolder;
             filepath += QDir::toNativeSeparators("/") + generateAudioStorageFilename(aff);
 
-            if(!TT_StartRecordingMuxedAudioFile(ttInst, &m_mychannel.audiocodec, 
-                                                _W(filepath), aff))
+            if (!TT_StartRecordingMuxedStreams(ttInst, sts, &m_mychannel.audiocodec,
+                                               _W(filepath), aff))
             {
                 QMessageBox::critical(this, tr("Error"), tr("Failed to start recording"));
                 return;
@@ -2643,7 +2645,7 @@ void MainWindow::updateAudioStorage(bool enable, AudioStorageMode mode)
         }
     }
     
-    if(mode == AUDIOSTORAGE_SEPARATEFILES)
+    if (mode & AUDIOSTORAGE_SEPARATEFILES)
     {
         int userCount = 0;
         QVector<User> users;
@@ -4069,6 +4071,8 @@ void MainWindow::slotUsersAdvancedMediaFileAllowed(bool checked/*=false*/)
 void MainWindow::slotUsersStoreAudioToDisk(bool/* checked*/)
 {
     quint32 old_mode = m_audiostorage_mode;
+    quint32 old_sts = ttSettings->value(SETTINGS_MEDIASTORAGE_STREAMTYPES,
+                                        SETTINGS_MEDIASTORAGE_STREAMTYPES_DEFAULT).toUInt();
 
     if(MediaStorageDlg(this).exec())
     {
@@ -4077,23 +4081,26 @@ void MainWindow::slotUsersStoreAudioToDisk(bool/* checked*/)
         ui.actionMediaStorage->setChecked(true);
         quint32 new_mode = ttSettings->value(SETTINGS_MEDIASTORAGE_MODE, 
                                              AUDIOSTORAGE_NONE).toUInt();
-        if(old_mode & AUDIOSTORAGE_SINGLEFILE)
+        quint32 new_sts = ttSettings->value(SETTINGS_MEDIASTORAGE_STREAMTYPES,
+                                            SETTINGS_MEDIASTORAGE_STREAMTYPES_DEFAULT).toUInt();
+
+        if ((old_mode & AUDIOSTORAGE_SINGLEFILE))
         {
             updateAudioStorage(false, AUDIOSTORAGE_SINGLEFILE);
             m_audiostorage_mode &= ~AUDIOSTORAGE_SINGLEFILE;
         }
-        if(old_mode & AUDIOSTORAGE_SEPARATEFILES)
+        if (old_mode & AUDIOSTORAGE_SEPARATEFILES)
         {
             updateAudioStorage(false, AUDIOSTORAGE_SEPARATEFILES);
             m_audiostorage_mode &= ~AUDIOSTORAGE_SEPARATEFILES;
         }
 
-        if(new_mode & AUDIOSTORAGE_SINGLEFILE)
+        if (new_mode & AUDIOSTORAGE_SINGLEFILE)
         {
             updateAudioStorage(true, AUDIOSTORAGE_SINGLEFILE);
             m_audiostorage_mode |= AUDIOSTORAGE_SINGLEFILE;
         }
-        if(new_mode & AUDIOSTORAGE_SEPARATEFILES)
+        if (new_mode & AUDIOSTORAGE_SEPARATEFILES)
         {
             updateAudioStorage(true, AUDIOSTORAGE_SEPARATEFILES);
             m_audiostorage_mode |= AUDIOSTORAGE_SEPARATEFILES;
